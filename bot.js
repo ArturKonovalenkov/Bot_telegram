@@ -2,11 +2,12 @@ const { Telegraf, Markup } = require('telegraf')
 const { message } = require('telegraf/filters')
 const path = require('path')
 const fs = require('fs')
+require("dotenv").config()
 const { MainText, Instruction1, Instruction2, urlJet, urlMines, promoMines, promoJet } = require('./function')
 
-const BOT_TOKEN = "7721755188:AAEVF7gxaY8sm27xwvUqRNfDMc50KQr5WPo"
+const BOT_TOKEN = process.env.BOT_TOKEN1
 
-const BOT_TOKEN_REF='7711874638:AAHWdQVjTi7qiMRi1U09rFqCu3Vh5hbpHRs'
+const BOT_TOKEN_REF = process.env.BOT_TOKEN_REF2
 
 
 const botRef = new Telegraf(BOT_TOKEN_REF)
