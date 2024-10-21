@@ -2,6 +2,8 @@ const { Telegraf, Markup } = require('telegraf')
 const { message } = require('telegraf/filters')
 const path = require('path')
 const fs = require('fs')
+const express = require('express');
+const app = express();
 require("dotenv").config()
 const { MainText, Instruction1, Instruction2, urlJet, urlMines, promoMines, promoJet } = require('./function')
 
@@ -334,7 +336,20 @@ bot.help((ctx) => ctx.reply('Send me a sticker'))
 bot.on(message('sticker'), (ctx) => ctx.reply('👍'))
 bot.hears('hi', (ctx) => ctx.reply('Hey there'))
 botRef.launch();
-bot.launch()
+const PORT = process.env.PORT || 3000; // Используйте PORT из переменной окружения
+
+
+
+// Запуск приложения на указанном порте
+
+bot.launch(
+  // {
+  // webhook: {
+  //   domain: 'https://<your-app-name>.render.com', // Укажите домен вашего приложения на Render
+  //   port: PORT,
+  // },
+// }
+);
 // Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'))
 process.once('SIGTERM', () => bot.stop('SIGTERM'))
