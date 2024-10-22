@@ -2,8 +2,6 @@ const { Telegraf, Markup } = require('telegraf')
 const { message } = require('telegraf/filters')
 const path = require('path')
 const fs = require('fs')
-const express = require('express');
-const app = express();
 require("dotenv").config()
 const { MainText, Instruction1, Instruction2, urlJet, urlMines, promoMines, promoJet } = require('./function')
 
@@ -22,44 +20,6 @@ bot.start((ctx) => {
 
 const filePath = path.join(__dirname, 'ref.txt'); // Путь к файлу
 const telegramIdFilePath = path.join(__dirname, 'telegramId.txt');
-
-
-// Обработчик текстовых сообщений
-// bot.on('text', (ctx) => {
-//     const userMessage = ctx.message.text; // Получаем текст сообщения
-//     const telegramId = ctx.from.id
-
-//     const referalId = userMessage.trim(); // Убираем пробелы
-
-//     // Записываем ID реферала в файл
-//     fs.appendFile(filePath, `${referalId}\n`, (err) => {
-//         if (err) {
-//             console.error('Ошибка при сохранении реферального ID:', err);
-//             ctx.reply('Не удалось сохранить реферальный ID.');
-//         } else {
-//             console.log('Реферальный ID сохранен:', referalId);
-//             ctx.reply('Ваш реферальный ID потвержден!',
-//               Markup.inlineKeyboard([
-//                 [Markup.button.callback('🚀 Выдать сигнал LuckyJet🚀', 'signalJet')],
-//                 [Markup.button.callback('🚀 Выдать сигнал Mines🚀', 'signalMines')],
-              
-//               ])
-//             );
-//         }
-//     });
-//     fs.appendFile(telegramIdFilePath, `${telegramId}\n`, (err) => {
-
-//           console.log('Реферальный ID сохранен:', referalId);
-//       })
-// });
-
-
-// Функция для проверки ID пользователя в файле ref.txt
-const checkUserId = (userId) => {
-  const filePath = path.join(__dirname, 'ref.txt'); // Путь к вашему файлу
-  const ids = fs.readFileSync(filePath, 'utf-8').split('\n'); // Чтение файла и разделение по строкам
-  return ids.includes(userId.toString().trim()); // Проверка наличия ID
-};
 
 const checkUserTGId = (userId) => {
   const filePath = path.join(__dirname, 'telegramId.txt'); // Путь к вашему файлу
@@ -108,12 +68,10 @@ const checkUserTGId = (userId) => {
         '✅ <b>Что делать дальше?</b>\n' +
         '1. Перейдите в раздел <b>Регистрация</b>.\n' +
         '2. Ознакомьтесь с разделом <b>Инструкция</b> и начните играть!',
-    Markup.inlineKeyboard([
-        
+    Markup.inlineKeyboard([ 
           [Markup.button.url('📱 Регистрация', urlMines)],
           [Markup.button.callback('📚 Инструкция', 'instruction2')],
-          [Markup.button.callback('🚀 Выдать сигнал 🚀', 'signalMines')],
-        
+          [Markup.button.callback('🚀 Выдать сигнал 🚀', 'signalMines')], 
     ])
    )
     })
@@ -126,9 +84,6 @@ const checkUserTGId = (userId) => {
    bot.action('instruction2',(ctx)=>{
     Instruction2(ctx)
    })
-
-
-
 
 // Флаг для отслеживания того, что бот ждет реферальный ID
 let isWaitingForReferral = false;
@@ -235,7 +190,7 @@ bot.action('signalJet', async (ctx) => {
       await ctx.deleteMessage(loadingMessage.message_id);
 
       // Генерируем случайный номер от 500000 до 999999
-      const randomNumber = Math.floor(Math.random() * (999999 - 500000 + 1)) + 500000;
+      const randomNumber = Math.floor(Math.random() * (895490 - 895439 + 1)) + 895439;
       const randomChange = Math.floor(Math.random() * (99 - 75 + 1)) + 75;
 
       // Получаем путь к случайному изображению
@@ -266,8 +221,6 @@ bot.action('signalJet', async (ctx) => {
 
 bot.action('signalMines', async (ctx) => {
   const userId = ctx.from.id;
-
-  
   // Проверяем ID пользователя
   if (checkUserTGId(userId)) {
     try {
@@ -295,7 +248,7 @@ bot.action('signalMines', async (ctx) => {
       await ctx.deleteMessage(loadingMessage.message_id);
 
       // Генерируем случайный номер от 500000 до 999999
-      const randomNumber = Math.floor(Math.random() * (999999 - 500000 + 1)) + 500000;
+      const randomNumber = Math.floor(Math.random() * (895490 - 895439 + 1)) + 895439;
       const randomChange = Math.floor(Math.random() * (99 - 75 + 1)) + 75;
 
       // Получаем путь к случайному изображению
@@ -336,19 +289,12 @@ bot.help((ctx) => ctx.reply('Send me a sticker'))
 bot.on(message('sticker'), (ctx) => ctx.reply('👍'))
 bot.hears('hi', (ctx) => ctx.reply('Hey there'))
 botRef.launch();
-const PORT = process.env.PORT || 3000; // Используйте PORT из переменной окружения
 
 
 
 // Запуск приложения на указанном порте
 
 bot.launch(
-  // {
-  // webhook: {
-  //   domain: 'https://<your-app-name>.render.com', // Укажите домен вашего приложения на Render
-  //   port: PORT,
-  // },
-// }
 );
 // Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'))
