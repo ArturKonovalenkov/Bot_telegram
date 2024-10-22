@@ -5,7 +5,7 @@ const fs = require('fs')
 require("dotenv").config()
 const { MainText, Instruction1, Instruction2, urlJet, urlMines, promoMines, promoJet } = require('./function')
 
-const BOT_TOKEN = process.env.BOT_TOKEN1
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 
 const BOT_TOKEN_REF = process.env.BOT_TOKEN_REF2
 
