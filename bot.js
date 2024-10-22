@@ -312,22 +312,35 @@ if (!process.env.VERCEL_URL) {
     });
 }
 
-bot.telegram.setWebhook(webhookUrl)
-  .then(() => {
-    console.log(`Вебхук установлен: ${webhookUrl}`);
-  })
-  .catch((err) => {
-    if (err.response && err.response.error_code === 429) {
-      const retryAfter = err.response.parameters.retry_after;
-      console.error(`Слишком много запросов, повторите через ${retryAfter} секунд.`);
-      setTimeout(() => {
-        bot.telegram.setWebhook(webhookUrl);
-      }, retryAfter * 1000);
-    } else {
-      console.error('Ошибка при установке вебхука:', err);
-    }
-  });
+function setupWebhook() {
+  bot.telegram.getWebhookInfo()
+    .then((info) => {
+      if (info.url) {
+        console.log(`Вебхук уже установлен: ${info.url}`);
+      } else {
+        bot.telegram.setWebhook(webhookUrl)
+          .then(() => {
+            console.log(`Вебхук успешно установлен: ${webhookUrl}`);
+          })
+          .catch((err) => {
+            if (err.response && err.response.error_code === 429) {
+              const retryAfter = err.response.parameters.retry_after;
+              console.error(`Слишком много запросов, повторите через ${retryAfter} секунд.`);
+              setTimeout(() => {
+                setupWebhook();  // Повторная попытка после задержки
+              }, retryAfter * 1000);
+            } else {
+              console.error('Ошибка при установке вебхука:', err);
+            }
+          });
+      }
+    })
+    .catch((err) => {
+      console.error('Ошибка при получении информации о вебхуке:', err);
+    });
+}
 
+setupWebhook();
 
 app.get('/', (req, res) => {
   res.send('Бот работает');
