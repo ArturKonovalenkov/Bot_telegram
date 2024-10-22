@@ -9,6 +9,10 @@ const { MainText, Instruction1, Instruction2, urlJet, urlMines, promoMines, prom
 
 const app = express();
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
+const VERCEL_URL = process.env.VERCEL_URL
+// console.log(BOT_TOKEN,"1");
+// console.log(VERCEL_URL,"2");
+
 const BOT_TOKEN_REF = process.env.BOT_TOKEN_REF2
 
 
@@ -286,22 +290,48 @@ function getRandomImagePathLuckyJet() {
   const randomFile = files[Math.floor(Math.random() * files.length)]; // Выбираем случайный файл
   return path.join(imagesDir, randomFile); // Возвращаем полный путь к случайному изображению
 }
+app.use(express.json());
+
+app.post(`/${BOT_TOKEN}`, (req, res) => {
+  bot.handleUpdate(req.body);
+  res.sendStatus(200);
+});
+
+// Запускаем вебхук
+const webhookUrl = `${VERCEL_URL}/${BOT_TOKEN}`;
+
+if (!process.env.VERCEL_URL) {
+  console.error('Ошибка: VERCEL_URL не определена. Убедитесь, что вы настроили переменные окружения в Vercel.');
+} else {
+  bot.telegram.setWebhook(webhookUrl)
+    .then(() => {
+      console.log(`Вебхук установлен: ${webhookUrl}`);
+    })
+    .catch(err => {
+      console.error('Ошибка при установке вебхука:', err);
+    });
+}
+
+app.get('/', (req, res) => {
+  res.send('Бот работает');
+});
+
+module.exports = app;
+
+
+// bot.help((ctx) => ctx.reply('Send me a sticker'))
+// bot.on(message('sticker'), (ctx) => ctx.reply('👍'))
+// bot.hears('hi', (ctx) => ctx.reply('Hey there'))
+// botRef.launch();
 
 
 
-bot.help((ctx) => ctx.reply('Send me a sticker'))
-bot.on(message('sticker'), (ctx) => ctx.reply('👍'))
-bot.hears('hi', (ctx) => ctx.reply('Hey there'))
-botRef.launch();
+// // Запуск приложения на указанном порте
 
-
-
-// Запуск приложения на указанном порте
-
-bot.launch(
-);
-// Enable graceful stop
-process.once('SIGINT', () => bot.stop('SIGINT'))
-process.once('SIGTERM', () => bot.stop('SIGTERM'))
+// bot.launch(
+// );
+// // Enable graceful stop
+// process.once('SIGINT', () => bot.stop('SIGINT'))
+// process.once('SIGTERM', () => bot.stop('SIGTERM'))
 
 
