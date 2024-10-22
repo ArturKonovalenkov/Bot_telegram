@@ -1,187 +1,168 @@
 const { Telegraf, Markup } = require('telegraf');
 const path = require('path');
 const fs = require('fs');
-require("dotenv").config();
+require('dotenv').config();
 const express = require('express');
-const { MainText, Instruction1, Instruction2, urlJet, urlMines } = require('./function');
+const {
+  MainText,
+  Instruction1,
+  Instruction2,
+  urlJet,
+  urlMines,
+} = require('./function');
 
 const app = express();
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const VERCEL_URL = process.env.VERCEL_URL;
 
 const bot = new Telegraf(BOT_TOKEN);
-
-// Middleware для обработки JSON
 app.use(express.json());
 
-// Функция для проверки Telegram ID пользователя
-const checkUserTGId = (userId) => {
-    const ids = fs.readFileSync(path.join(__dirname, 'telegramId.txt'), 'utf-8').split('\n');
-    return ids.includes(userId.toString().trim());
-};
+// Файлы для хранения данных
+const filePath = path.join(__dirname, 'ref.txt');
+const telegramIdFilePath = path.join(__dirname, 'telegramId.txt');
 
-// Установка вебхука
-const webhookUrl = `${VERCEL_URL}/${BOT_TOKEN}`;
-bot.telegram.setWebhook(webhookUrl)
-    .then(() => {
-        console.log(`Вебхук установлен: ${webhookUrl}`);
-    })
-    .catch(err => {
-        console.error('Ошибка при установке вебхука:', err);
-    });
-
-// Обработка обновлений от Telegram
-app.post(`/${BOT_TOKEN}`, (req, res) => {
-    bot.handleUpdate(req.body);
-    res.sendStatus(200);
-});
-
-// Обработчики команд
-bot.start((ctx) => MainText(ctx));
-
-bot.action('main', (ctx) => MainText(ctx));
-bot.action('jet', (ctx) => sendGameInfo(ctx, 'jet'));
-bot.action('mines', (ctx) => sendGameInfo(ctx, 'mines'));
-bot.action('instruction1', (ctx) => Instruction1(ctx));
-bot.action('instruction2', (ctx) => Instruction2(ctx));
-
-// Функция для отправки информации о игре
-function sendGameInfo(ctx, gameType) {
-    const imagePath = path.join(__dirname, 'images', gameType === 'jet' ? 'jetTg.jpg' : 'intro_mines.jpg');
-    const gameName = gameType === 'jet' ? 'ABUZ LuckyJet' : 'ABUZ Mines';
-    const url = gameType === 'jet' ? urlJet : urlMines;
-    
-    ctx.replyWithPhoto({ source: imagePath })
-        .then(() => {
-            return ctx.replyWithHTML(
-                `🎉 <b>Добро пожаловать в</b> 🔸 <b>${gameName}</b> 🔸!\n\n` +
-                '🚀 <i>Это захватывающая гэмблинг игра в букмекерской конторе 1win.</i>\n\n' +
-                '🎯 Ваша цель: забрать выигрыш отгадать, где находяться <b>звездочки</b>, а не мины 🚀\n\n' +
-                '🤖 Наш бот работает на базе нейросети <b>ChatGPT-4</b>!\n\n' +
-                '✅ <b>Что делать дальше?</b>\n' +
-                '1. Перейдите в раздел <b>Регистрация</b>.\n' +
-                '2. Ознакомьтесь с разделом <b>Инструкция</b> и начните играть!',
-                Markup.inlineKeyboard([
-                    [Markup.button.url('📱 Регистрация', url)],
-                    [Markup.button.callback('📚 Инструкция', gameType === 'jet' ? 'instruction1' : 'instruction2')],
-                    [Markup.button.callback('🚀 Выдать сигнал 🚀', `signal${gameType.charAt(0).toUpperCase() + gameType.slice(1)}`)]
-                ])
-            );
-        });
-}
-
-// Обработчик кнопки "Проверить регистрацию"
+// Флаг ожидания реферального ID
 let isWaitingForReferral = false;
 
+// Функция для чтения ID из файла
+const readIdsFromFile = (filePath) => {
+  return fs.readFileSync(filePath, 'utf-8').split('\n').map(id => id.trim());
+};
+
+// Проверка наличия пользователя в системе
+const checkUserTGId = (userId) => {
+  const ids = readIdsFromFile(telegramIdFilePath);
+  return ids.includes(userId.toString());
+};
+
+// Обработчик команды /start
+bot.start((ctx) => {
+  MainText(ctx);
+});
+
+// Обработчики действий
+bot.action('main', (ctx) => MainText(ctx));
+bot.action('jet', (ctx) => sendWelcomeMessage(ctx, 'jet'));
+bot.action('mines', (ctx) => sendWelcomeMessage(ctx, 'mines'));
+bot.action('instruction1', (ctx) => Instruction1(ctx));
+bot.action('instruction2', (ctx) => Instruction2(ctx));
+bot.action('check_registr', (ctx) => handleCheckRegistration(ctx));
+
+// Основная логика отправки приветственного сообщения
+const sendWelcomeMessage = (ctx, gameType) => {
+  const images = {
+    jet: path.join(__dirname, 'images', 'jetTg.jpg'),
+    mines: path.join(__dirname, 'images', 'intro_mines.jpg'),
+  };
+
+  const texts = {
+    jet: '🎉 <b>Добро пожаловать в</b> 🔸 <b>ABUZ LuckyJet</b> 🔸!\n\n' +
+      '🚀 <i>LuckyJet — это захватывающая гэмблинг игра в букмекерской конторе 1win</i>...',
+    mines: '🎉 <b>Добро пожаловать в</b> 🔸 <b>ABUZ Mines</b> 🔸!\n\n' +
+      '🚀 <i>MInes — это захватывающая гэмблинг игра в букмекерской конторе 1win</i>...',
+  };
+
+  ctx.replyWithPhoto({ source: images[gameType] })
+    .then(() => ctx.replyWithHTML(texts[gameType], Markup.inlineKeyboard([
+      [Markup.button.url('📱 Регистрация', gameType === 'jet' ? urlJet : urlMines)],
+      [Markup.button.callback('📚 Инструкция', gameType === 'jet' ? 'instruction1' : 'instruction2')],
+      [Markup.button.callback('🚀 Выдать сигнал 🚀', gameType === 'jet' ? 'signalJet' : 'signalMines')]
+    ])));
+};
+
+// Обработчик ожидания реферального ID
 bot.action('check_registr', (ctx) => {
-    ctx.replyWithPhoto({ source: path.join(__dirname, 'images', 'idWin.jpg') })
-        .then(() => ctx.reply("Пожалуйста, отправьте ваш реферальный ID для подтверждения:"))
-        .then(() => { isWaitingForReferral = true; })
-        .catch(err => {
-            console.error('Ошибка при отправке сообщения или обработке:', err);
-            ctx.reply('Произошла ошибка, попробуйте снова.');
-        });
+  const imagePath = path.join(__dirname, 'images', 'idWin.jpg');
+  ctx.replyWithPhoto({ source: imagePath })
+    .then(() => ctx.reply("Пожалуйста, отправьте ваш реферальный ID для подтверждения:"))
+    .then(() => {
+      isWaitingForReferral = true;
+    });
 });
 
 // Обработчик текстовых сообщений
 bot.on('text', (ctx) => {
-    if (!isWaitingForReferral) return;
+  if (!isWaitingForReferral) return;
 
-    const userMessage = ctx.message.text.trim();
-    const telegramId = ctx.from.id;
+  const userMessage = ctx.message.text.trim();
+  const telegramId = ctx.from.id;
 
-    // Записываем реферальный ID в файл
-    fs.appendFileSync(path.join(__dirname, 'ref.txt'), `${userMessage}\n`);
-    fs.appendFileSync(path.join(__dirname, 'telegramId.txt'), `${telegramId}\n`);
-
-    ctx.reply('Ваш реферальный ID подтвержден!', Markup.inlineKeyboard([
+  fs.appendFile(filePath, `${userMessage}\n`, (err) => {
+    if (err) {
+      console.error('Ошибка при сохранении реферального ID:', err);
+      ctx.reply('Не удалось сохранить реферальный ID.');
+    } else {
+      ctx.reply('Ваш реферальный ID подтвержден!', Markup.inlineKeyboard([
         [Markup.button.callback('🚀 Выдать сигнал LuckyJet 🚀', 'signalJet')],
         [Markup.button.callback('🚀 Выдать сигнал Mines 🚀', 'signalMines')]
+      ]));
+
+      // Запись Telegram ID пользователя
+      fs.appendFile(telegramIdFilePath, `${telegramId}\n`, (err) => {
+        if (err) console.error('Ошибка при сохранении Telegram ID:', err);
+      });
+    }
+  });
+
+  isWaitingForReferral = false;
+});
+
+// Отправка сигнала (примеры)
+const signalHandler = async (ctx, gameType) => {
+  const userId = ctx.from.id;
+
+  if (!checkUserTGId(userId)) {
+    return ctx.reply('Сначала пройдите регистрацию.', Markup.inlineKeyboard([
+      [Markup.button.url('📱 Регистрация', gameType === 'jet' ? urlJet : urlMines)],
+      [Markup.button.callback('🔙 Проверить регистрацию', 'check_registr')]
     ]));
+  }
 
-    isWaitingForReferral = false; // Сброс состояния
+  // Здесь ваша логика генерации и отправки сигнала
+  // Пример с использованием заглушек для демонстрации
+  const randomImagePath = getRandomImagePath(gameType);
+  const randomNumber = Math.floor(Math.random() * (999999 - 500000 + 1)) + 500000; // Обновите диапазон по вашему усмотрению
+  await ctx.replyWithPhoto({ source: randomImagePath }, { caption: `Game № ${randomNumber}` });
+};
+
+// Вызовы сигналов
+bot.action('signalJet', (ctx) => signalHandler(ctx, 'jet'));
+bot.action('signalMines', (ctx) => signalHandler(ctx, 'mines'));
+
+// Генерация случайного изображения
+const getRandomImagePath = (gameType) => {
+  const imagesDir = path.join(__dirname, `images/${gameType === 'jet' ? 'jetSignal' : 'MinesSignal'}`);
+  const files = fs.readdirSync(imagesDir);
+  const randomFile = files[Math.floor(Math.random() * files.length)];
+  return path.join(imagesDir, randomFile);
+};
+
+// Настройка вебхука
+const setupWebhook = () => {
+  const webhookUrl = `${VERCEL_URL}/${BOT_TOKEN}`;
+  bot.telegram.setWebhook(webhookUrl)
+    .then(() => console.log(`Вебхук установлен: ${webhookUrl}`))
+    .catch(err => console.error('Ошибка при установке вебхука:', err));
+};
+
+// Запуск вебхука
+if (!VERCEL_URL) {
+  console.error('Ошибка: VERCEL_URL не определена. Убедитесь, что вы настроили переменные окружения в Vercel.');
+} else {
+  setupWebhook();
+}
+
+// Обработка входящих обновлений
+app.post(`/${BOT_TOKEN}`, (req, res) => {
+  bot.handleUpdate(req.body);
+  res.sendStatus(200);
 });
 
-// Обработчики сигналов
-const signalMessages = {};
-
-bot.action('signalJet', async (ctx) => handleSignal(ctx, 'jet'));
-bot.action('signalMines', async (ctx) => handleSignal(ctx, 'mines'));
-
-// Обработка сигнала
-async function handleSignal(ctx, gameType) {
-    const userId = ctx.from.id;
-
-    if (!checkUserTGId(userId)) {
-        return ctx.reply('Сначала пройдите регистрацию.', Markup.inlineKeyboard([
-            [Markup.button.url('📱 Регистрация', gameType === 'jet' ? urlJet : urlMines)],
-            [Markup.button.callback('🔙 Проверить регистрацию', 'check_registr')]
-        ]));
-    }
-
-    try {
-        // Удаляем старое сообщение, если оно есть
-        if (signalMessages[userId]) {
-            await ctx.deleteMessage(signalMessages[userId]);
-        }
-
-        const loadingMessage = await ctx.reply('Получаю данные с сервера...');
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        await ctx.deleteMessage(loadingMessage.message_id);
-
-        const randomImagePath = getRandomImagePath(gameType);
-        const randomNumber = Math.floor(Math.random() * (999999 - 500000 + 1)) + 500000;
-        const randomChange = Math.floor(Math.random() * (99 - 75 + 1)) + 75;
-
-        const newSignalMessage = await ctx.replyWithPhoto(
-            { source: randomImagePath },
-            { caption: `Game № ${randomNumber} \nChance: ${randomChange}%` }
-        );
-
-        signalMessages[userId] = newSignalMessage.message_id;
-    } catch (err) {
-        console.error('Ошибка при выполнении команды:', err);
-        ctx.reply('Произошла ошибка при выполнении команды.');
-    }
-}
-
-// Функция для получения случайного изображения
-function getRandomImagePath(gameType) {
-    const imagesDir = path.join(__dirname, `images/${gameType === 'jet' ? 'jetSignal' : 'MinesSignal'}`);
-    const files = fs.readdirSync(imagesDir);
-    const randomFile = files[Math.floor(Math.random() * files.length)];
-    return path.join(imagesDir, randomFile);
-}
-
-// Начальный маршрут
+// Основной маршрут
 app.get('/', (req, res) => {
-    res.send('Бот работает');
+  res.send('Бот работает');
 });
 
-// Экспортируем приложение
+// Экспорт приложения
 module.exports = app;
-
-// Запуск сервера
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Сервер запущен на порту ${PORT}`);
-});
-module.exports = app;
-
-
-// bot.help((ctx) => ctx.reply('Send me a sticker'))
-// bot.on(message('sticker'), (ctx) => ctx.reply('👍'))
-// bot.hears('hi', (ctx) => ctx.reply('Hey there'))
-// botRef.launch();
-
-
-
-// // Запуск приложения на указанном порте
-
-// bot.launch(
-// );
-// // Enable graceful stop
-// process.once('SIGINT', () => bot.stop('SIGINT'))
-// process.once('SIGTERM', () => bot.stop('SIGTERM'))
-
-
