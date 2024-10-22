@@ -3,12 +3,13 @@ const { message } = require('telegraf/filters')
 const path = require('path')
 const fs = require('fs')
 require("dotenv").config()
+const express = require('express');
 const { MainText, Instruction1, Instruction2, urlJet, urlMines, promoMines, promoJet } = require('./function')
 
+
+const app = express();
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
-
 const BOT_TOKEN_REF = process.env.BOT_TOKEN_REF2
-
 
 const botRef = new Telegraf(BOT_TOKEN_REF)
 const bot = new Telegraf(BOT_TOKEN)
@@ -285,18 +286,30 @@ function getRandomImagePathLuckyJet() {
   return path.join(imagesDir, randomFile); // Возвращаем полный путь к случайному изображению
 }
 
-bot.help((ctx) => ctx.reply('Send me a sticker'))
-bot.on(message('sticker'), (ctx) => ctx.reply('👍'))
-bot.hears('hi', (ctx) => ctx.reply('Hey there'))
-botRef.launch();
+app.use(express.json());
 
+app.post(`/${BOT_TOKEN}`, (req, res) => {
+  bot.handleUpdate(req.body);
+  res.sendStatus(200);
+});
 
+// Запускаем вебхук
+const webhookUrl = `https://${process.env.VERCEL_URL}/${BOT_TOKEN}`;
 
-// Запуск приложения на указанном порте
+if (!process.env.VERCEL_URL) {
+  console.error('Ошибка: VERCEL_URL не определена. Убедитесь, что вы настроили переменные окружения в Vercel.');
+} else {
+  bot.telegram.setWebhook(webhookUrl)
+    .then(() => {
+      console.log(`Вебхук установлен: ${webhookUrl}`);
+    })
+    .catch(err => {
+      console.error('Ошибка при установке вебхука:', err);
+    });
+}
 
-bot.launch(
-);
-// Enable graceful stop
-process.once('SIGINT', () => bot.stop('SIGINT'))
-process.once('SIGTERM', () => bot.stop('SIGTERM'))
+app.get('/', (req, res) => {
+  res.send('Бот работает');
+});
 
+module.exports = app;
